@@ -52,3 +52,48 @@ def insert():
         "marks": marks,
         "grade": grade
     })
+# -------------- Pub/Sub Trigger Endpoint ----------
+@app.route("/pubsub-trigger", methods=["POST"])
+def pubsub_trigger():
+
+    envelope = request.get_json()
+
+    if not envelope:
+        return ("Bad Request: No Pub/Sub message received", 400)
+
+    if "message" not in envelope:
+        return ("Invalid Pub/Sub message format", 400)
+
+    pubsub_message = envelope["message"]
+
+    # Decode Pub/Sub message (base64 encoded)
+    if "data" in pubsub_message:
+        decoded = base64.b64decode(pubsub_message["data"]).decode("utf-8")
+        data = json.loads(decoded)
+    else:
+        data = {}
+
+    name = data.get("name")
+    marks = data.get("marks")
+
+    grade = calc_grade(marks)
+
+    row = [{
+        "name": name,
+        "marks": marks,
+        "grade": grade,
+        "timestamp": datetime.utcnow().isoformat()
+    }]
+
+    table = "traffic-07.student_api.grades_table"
+    errors = bq_client.insert_rows_json(table, row)
+
+    if errors:
+        return jsonify({"status": "error", "errors": errors}), 400
+
+    return jsonify({
+        "status": "pubsub insert success",
+        "name": name,
+        "marks": marks,
+        "grade": grade
+    })
