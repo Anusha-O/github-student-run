@@ -1,6 +1,8 @@
 from flask import Flask, request, jsonify
 from google.cloud import bigquery
 from datetime import datetime
+import base64
+import json
 
 app = Flask(__name__)
 bq_client = bigquery.Client()
